@@ -101,6 +101,7 @@ def remove_cycles(ranking: pd.DataFrame) -> pd.DataFrame:
 
 
 def display_ranking(ranking: set[tuple[str, str, Relation]], title: str) -> None:
+    plt.figure()
     outranking_matrix = convert_to_outranking_matrix(ranking)
 
     diagram = remove_cycles(outranking_matrix)
