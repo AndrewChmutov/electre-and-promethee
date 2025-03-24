@@ -11,9 +11,10 @@ from promethee.utils import (
     Relation,
 )
 
+ScalarOrNumpy = float | np.ndarray
 
 # TODO
-def calculate_marginal_preference_index[T: (float, np.ndarray), U: (float, np.ndarray)](
+def calculate_marginal_preference_index[T: ScalarOrNumpy, U: ScalarOrNumpy](
     diff: T, q: U, p: U
 ) -> T:
     """

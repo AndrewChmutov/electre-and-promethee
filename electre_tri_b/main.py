@@ -13,12 +13,12 @@ from electre_tri_b.utils import (
     load_criterion_types,
     load_credibility_threshold,
 )
-
+from promethee.main import ScalarOrNumpy
 
 # TODO
 def calculate_marginal_concordance_index[
-    T: (float, np.ndarray),
-    U: (float, np.ndarray),
+    T: ScalarOrNumpy,
+    U: ScalarOrNumpy,
 ](diff: T, q: U, p: U) -> T:
     """
     Function that calculates the marginal concordance index for the given pair of alternatives, according to the formula presented during classes.
@@ -35,9 +35,9 @@ def calculate_marginal_concordance_index[
 def calculate_marginal_concordance_matrix(
     dataset: pd.DataFrame,
     boundary_profiles: pd.DataFrame,
-    indifference_thresholds,
-    preference_thresholds,
-    criterion_types,
+    indifference_thresholds: pd.DataFrame,
+    preference_thresholds: pd.DataFrame,
+    criterion_types: pd.DataFrame,
 ) -> np.ndarray:
     """
     Function that calculates the marginal concordance matrix for all alternatives pairs and criterion available in dataset
@@ -68,8 +68,8 @@ def calculate_comprehensive_concordance_matrix(
 
 # TODO
 def calculate_marginal_discordance_index[
-    T: (float, np.ndarray),
-    U: (float, np.ndarray),
+    T: ScalarOrNumpy,
+    U: ScalarOrNumpy,
 ](diff: T, p: U, v: U) -> T:
     """
     Function that calculates the marginal concordance index for the given pair of alternatives, according to the formula presented during classes.
@@ -173,7 +173,7 @@ def calculate_optimistic_assigment(relation: pd.DataFrame) -> pd.DataFrame:
 
 @click.command()
 @click.argument("dataset_path", type=click.Path(exists=True))
-def promethee(dataset_path: Path) -> None:
+def electre_tri_b(dataset_path: Path) -> None:
     dataset_path = Path(dataset_path)
 
     dataset = load_dataset(dataset_path)
@@ -221,4 +221,4 @@ def promethee(dataset_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    promethee()
+    electre_tri_b()
