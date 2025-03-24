@@ -117,4 +117,8 @@ def display_ranking(ranking: set[tuple[str, str, Relation]], title: str) -> None
     layout = graphviz_layout(g, prog="dot")
     plt.title(title)
     nx.draw(g, layout, with_labels=True, arrows=True)
+
+    imgdir = Path("img")
+    imgdir.mkdir(exist_ok=True)
+    plt.savefig(imgdir / f"{title}.png")
     plt.show()
