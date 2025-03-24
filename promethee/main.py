@@ -1,3 +1,5 @@
+import os
+import itertools
 from pathlib import Path
 
 import click
@@ -25,7 +27,7 @@ def calculate_marginal_preference_index[T: ScalarOrNumpy, U: ScalarOrNumpy](
     :param p: preference threshold either as a float if you prefer to calculate for a single parser or as numpy array for multiple parser
     :return: marginal preference index either as a float for single parser and alternative pairs, or as numpy array for multiple alternative/parser
     """
-    raise NotImplementedError()
+    return np.minimum(np.maximum((diff - q) / (p - q), 0), 1)  # pyright: ignore[reportReturnType]
 
 
 # TODO
@@ -39,7 +41,27 @@ def calculate_marginal_preference_matrix(
     :param preference_information: preference information
     :return: 3D numpy array with marginal preference matrix on every parser, Consecutive indices [i, j, k] describe first alternative, second alternative, parser
     """
-    raise NotImplementedError()
+    dataset = dataset.copy()
+    preference_information = preference_information.copy()
+    cost_criteria = preference_information[preference_information["type"] == "cost"].index
+    dataset[cost_criteria] = -dataset[cost_criteria]
+    preference_information[["p", "q"]].loc[cost_criteria] = -preference_information[["p", "q"]].loc[cost_criteria]
+
+    marginal_preferences = np.zeros((
+        preference_information.shape[0],
+        dataset.shape[0],
+        dataset.shape[0],
+    ))
+    for (i, alt1), (j, alt2) in itertools.permutations(enumerate(dataset.index), 2):
+        diff = dataset.loc[alt1] - dataset.loc[alt2]
+        p = preference_information["p"]
+        q = preference_information["q"]
+        marginal_preferences[:, i, j] = calculate_marginal_preference_index(
+            diff=diff.to_numpy(),
+            q=q.to_numpy(),
+            p=p.to_numpy(),
+        )
+    return marginal_preferences
 
 
 # TODO
@@ -53,7 +75,10 @@ def calculate_comprehensive_preference_index(
     :param preference_information: Padnas preference information dataframe
     :return: 2D numpy array with marginal preference matrix. Every entry in the matrix [i, j] represents comprehensive preference index between alternative i and alternative j
     """
-    raise NotImplementedError()
+    # (n_weights) -> (n_weights, 1, 1)
+    weights = np.expand_dims(preference_information["k"].to_numpy(), (1, 2))
+    weights = weights / weights.sum()
+    return (marginal_preference_matrix * weights).sum(0)
 
 
 # TODO
@@ -67,7 +92,7 @@ def calculate_positive_flow(
     :param index: index representing the alternative in the corresponding position in preference matrix
     :return: series representing positive flow values for the given preference matrix
     """
-    raise NotImplementedError()
+    return pd.Series(comprehensive_preference_matrix.sum(1), index=index)
 
 
 # TODO
@@ -81,7 +106,7 @@ def calculate_negative_flow(
     :param index: index representing the alternative in the corresponding position in preference matrix
     :return: series representing negative flow values for the given preference matrix
     """
-    raise NotImplementedError()
+    return pd.Series(comprehensive_preference_matrix.sum(0), index=index)
 
 
 # TODO
@@ -93,7 +118,7 @@ def calculate_net_flow(positive_flow: pd.Series, negative_flow: pd.Series) -> pd
     :param negative_flow: series representing negative flow values for the given preference matrix
     :return: series representing net flow values for the given preference matrix
     """
-    raise NotImplementedError()
+    return positive_flow - negative_flow
 
 
 # TODO
@@ -107,7 +132,29 @@ def create_partial_ranking(
     :param negative_flow: series representing negative flow values for the given preference matrix
     :return: list of tuples when entries in a tuple represent first alternative, second alternative and the relation between them respectively
     """
-    raise NotImplementedError()
+    result = set()
+    alternatives = positive_flow.index
+    for i, j in itertools.permutations(alternatives, 2):
+        better_strength = positive_flow[i] > positive_flow[j]
+        better_weakness = negative_flow[i] < negative_flow[j]
+
+        if better_strength and better_weakness:
+            relation = Relation.PREFERRED
+        elif (
+            positive_flow[i] == positive_flow[j] and
+            negative_flow[i] == negative_flow[j]
+        ):
+            relation = Relation.INDIFFERENT
+        elif (
+            better_strength and not better_weakness or
+            not better_strength and better_weakness
+        ):
+            relation = Relation.INCOMPARABLE
+        else:
+            continue
+
+        result.add((str(i), str(j), relation))
+    return result
 
 
 # TODO
@@ -119,7 +166,18 @@ def create_complete_ranking(net_flow: pd.Series) -> set[tuple[str, str, Relation
     1 means that i is preferred over j, or they are indifferent
     0 otherwise
     """
-    raise NotImplementedError()
+    result = set()
+    alternatives = net_flow.index
+    for i, j in itertools.permutations(alternatives, 2):
+        if net_flow[i] > net_flow[j]:
+            relation = Relation.PREFERRED
+        elif net_flow[i] == net_flow[j]:
+            relation = Relation.INDIFFERENT
+        else:
+            continue
+
+        result.add((str(i), str(j), relation))
+    return result
 
 
 @click.command()
