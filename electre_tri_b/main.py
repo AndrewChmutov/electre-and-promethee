@@ -1,3 +1,4 @@
+import itertools
 from pathlib import Path
 
 import click
@@ -28,7 +29,7 @@ def calculate_marginal_concordance_index[
     :param p: preference threshold either as a float if you prefer to calculate for a single criterion or as numpy array for multiple criterion
     :return: marginal concordance index either as a float for single criterion and alternative pairs, or as numpy array for multiple criterion
     """
-    raise NotImplementedError()
+    return np.minimum(np.maximum((p + diff) / (p - q), 0), 1)  # pyright: ignore[reportReturnType]
 
 
 # TODO
@@ -49,7 +50,37 @@ def calculate_marginal_concordance_matrix(
     :param criterion_types: pandas dataframe with a column 'type' representing the type of criterion (either gain or cost)
     :return: 4D numpy array with marginal concordance matrix with shape [2, number of alternatives, number of boundary profiles, number of criterion], where element with index [0, i, j, k] describe marginal concordance index between alternative i and boundary profile j on criterion k, while element with index [1, i, j, k] describe marginal concordance index between boundary profile j and  alternative i on criterion k
     """
-    raise NotImplementedError()
+    dataset = dataset.copy()
+    cost_criteria = criterion_types[criterion_types["type"] == "cost"].index
+    dataset[cost_criteria] = -dataset[cost_criteria]
+    boundary_profiles[cost_criteria] = -boundary_profiles[cost_criteria]
+
+    marginal_concordance = np.zeros((
+        2,                              # alternative-boundary and boundary-alternative
+        dataset.shape[0],               # n_alt
+        boundary_profiles.shape[0],     # n_bounds
+        boundary_profiles.shape[1],     # n_crits
+    ))
+    for (i, alt), (j, bound) in itertools.product(
+        enumerate(dataset.index),
+        enumerate(boundary_profiles.index),
+    ):
+        alt_values = dataset.loc[alt]
+        bound_values = boundary_profiles.loc[bound]
+        p = preference_thresholds.loc[bound]
+        q = indifference_thresholds.loc[bound]
+
+        marginal_concordance[0, i, j, :] = calculate_marginal_concordance_index(
+            diff=(alt_values - bound_values).to_numpy(),
+            q=q.to_numpy(),
+            p=p.to_numpy(),
+        )
+        marginal_concordance[1, i, j, :] = calculate_marginal_concordance_index(
+            diff=(bound_values - alt_values).to_numpy(),
+            q=q.to_numpy(),
+            p=p.to_numpy(),
+        )
+    return marginal_concordance
 
 
 # TODO
@@ -63,7 +94,9 @@ def calculate_comprehensive_concordance_matrix(
     :param criterion_types: dataframe that contains "k" column with criterion weights
     :return: 3D numpy array with comprehensive concordance matrix with shape [2, number of alternatives, number of boundary profiles], where element with index [0, i, j] describe comprehensive concordance index between alternative i and boundary profile j, while element with index [1, i, j] describe comprehensive concordance index between boundary profile j and  alternative i
     """
-    raise NotImplementedError()
+    weights = criterion_types["k"].to_numpy()
+    weights = weights / weights.sum()
+    return marginal_concordance_matrix @ weights
 
 
 # TODO
@@ -79,7 +112,7 @@ def calculate_marginal_discordance_index[
     :param v: veto threshold either as a float if you prefer to calculate for a single criterion or as numpy array for multiple criterion
     :return: marginal discordance index either as a float for single criterion and alternative pairs, or as numpy array for multiple criterion
     """
-    raise NotImplementedError()
+    return np.minimum(np.maximum((v + diff) / (v - p), 0), 1)  # pyright: ignore[reportReturnType]
 
 
 # TODO
@@ -100,7 +133,37 @@ def calculate_marginal_discordance_matrix(
     :param criterion_types: pandas dataframe with a column 'type' representing the type of criterion (either gain or cost)
     :return: 4D numpy array with marginal discordance matrix with shape [2, number of alternatives, number of boundary profiles, number of criterion], where element with index [0, i, j, k] describe marginal discordance index between alternative i and boundary profile j on criterion k, while element with index [1, i, j, k] describe marginal discordance index between boundary profile j and  alternative i on criterion k
     """
-    raise NotImplementedError()
+    dataset = dataset.copy()
+    cost_criteria = criterion_types[criterion_types["type"] == "cost"].index
+    dataset[cost_criteria] = -dataset[cost_criteria]
+    boundary_profiles[cost_criteria] = -boundary_profiles[cost_criteria]
+
+    marginal_discordance = np.zeros((
+        2,                              # alternative-boundary and boundary-alternative
+        dataset.shape[0],               # n_alt
+        boundary_profiles.shape[0],     # n_bounds
+        boundary_profiles.shape[1],     # n_crits
+    ))
+    for (i, alt), (j, bound) in itertools.product(
+        enumerate(dataset.index),
+        enumerate(boundary_profiles.index)
+    ):
+        alt_values = dataset.loc[alt]
+        bound_values = boundary_profiles.loc[bound]
+        v = veto_thresholds.loc[bound]
+        p = preference_thresholds.loc[bound]
+
+        marginal_discordance[0, i, j, :] = calculate_marginal_discordance_index(
+            diff=(alt_values - bound_values).to_numpy(),
+            p=p.to_numpy(),
+            v=v.to_numpy(),
+        )
+        marginal_discordance[1, i, j, :] = calculate_marginal_discordance_index(
+            diff=(bound_values - alt_values).to_numpy(),
+            p=p.to_numpy(),
+            v=v.to_numpy(),
+        )
+    return marginal_discordance
 
 
 # TODO
@@ -115,7 +178,19 @@ def calculate_credibility_index(
     :param marginal_discordance_matrix: 3D numpy array with marginal discordance matrix, Consecutive indices [i, j, k] describe first alternative, second alternative, criterion
     :return: 3D numpy array with credibility matrix with shape [2, number of alternatives, number of boundary profiles], where element with index [0, i, j] describe credibility index between alternative i and boundary profile j, while element with index [1, i, j] describe credibility index between boundary profile j and  alternative i
     """
-    raise NotImplementedError()
+    outranking_credibility = comprehensive_concordance_matrix.copy()
+    marginal_discordance_matrix = np.nan_to_num(marginal_discordance_matrix)
+    for d in [0, 1]:
+        for i, j in itertools.product(*map(range, outranking_credibility.shape[1:])):
+            factors = np.ones((marginal_discordance_matrix.shape[-1]))
+            if (denom := (1 - comprehensive_concordance_matrix[d, i, j])) != 0:
+                factors = (
+                    (1 - marginal_discordance_matrix[d, i, j]) /
+                    denom
+                )
+                factors = np.minimum(factors, 1)
+            outranking_credibility[d, i, j] *= factors.prod()
+    return outranking_credibility
 
 
 # TODO
@@ -129,8 +204,15 @@ def calculate_outranking_relation_matrix(
     :param credibility_threshold: float number
     :return: 3D numpy boolean matrix with information if outranking holds for a given pair
     """
-    raise NotImplementedError()
+    return credibility_index >= credibility_threshold
 
+RELATION_TO_PREFERENCE = {
+    # (alt_bound, bound_alt): preference
+    (True, True): "I",
+    (True, False): ">",
+    (False, True): "<",
+    (False, False): "?",
+}
 
 # TODO
 def calculate_relation(
@@ -146,7 +228,13 @@ def calculate_relation(
     :param boundary_profiles_names: names of boundary profiles
     :return: pandas dataframe with relation between alternatives as rows and boundary profiles as columns. Use "<" or ">" for preference, "I" for indifference and "?" for incompatibility
     """
-    raise NotImplementedError()
+    relation = pd.DataFrame(index=alternatives, columns=boundary_profiles_names)
+    for i in range(alternatives.shape[0]):
+        for j in range(boundary_profiles_names.shape[0]):
+            alt_relation = outranking_relation_matrix[:, i, j]
+            relation.iloc[i, j] = RELATION_TO_PREFERENCE[tuple(alt_relation)]
+
+    return relation
 
 
 # TODO
@@ -157,8 +245,13 @@ def calculate_pessimistic_assigment(relation: pd.DataFrame) -> pd.DataFrame:
     :param relation: pandas dataframe with relation between alternatives as rows and boundary profiles as columns. With "<" or ">" for preference, "I" for indifference and "?" for incompatibility
     :return: dataframe with pessimistic assigment
     """
-    raise NotImplementedError()
-
+    classes = []
+    for _, row in relation.iterrows():
+        boundaries = reversed(row.tolist())
+        no_outranking = itertools.takewhile(lambda r: r in ["?", "<"], boundaries)
+        cls = len(row) - sum(map(lambda _: 1, no_outranking))
+        classes.append(cls)
+    return pd.DataFrame({"pessimistic": classes}, index=relation.index)
 
 # TODO
 def calculate_optimistic_assigment(relation: pd.DataFrame) -> pd.DataFrame:
@@ -168,7 +261,13 @@ def calculate_optimistic_assigment(relation: pd.DataFrame) -> pd.DataFrame:
     :param relation: pandas dataframe with relation between alternatives as rows and boundary profiles as columns. With "<" or ">" for preference, "I" for indifference and "?" for incompatibility
     :return: dataframe with optimistic assigment
     """
-    raise NotImplementedError()
+    classes = []
+    for _, row in relation.iterrows():
+        boundaries = row.tolist()
+        no_outranking = itertools.takewhile(lambda r: r in [">", "I", "?"], boundaries)
+        cls = sum(map(lambda _: 1, no_outranking))
+        classes.append(cls)
+    return pd.DataFrame({"optimistic": classes}, index=relation.index)
 
 
 @click.command()
@@ -216,9 +315,14 @@ def electre_tri_b(dataset_path: Path) -> None:
     pessimistic_assigment = calculate_pessimistic_assigment(relation)
     optimistic_assigment = calculate_optimistic_assigment(relation)
 
-    print("pessimistic assigment\n", pessimistic_assigment)
-    print("optimistic assigment\n", optimistic_assigment)
+    assignment = pd.concat([pessimistic_assigment, optimistic_assigment], axis=1)
+    print(assignment)
 
+    for assignment_type in assignment.columns:
+        print()
+        print(assignment_type.capitalize())
+        for cls in range(2, -1, -1):
+            print(cls, assignment[assignment[assignment_type] == cls].index.tolist())
 
 if __name__ == "__main__":
     electre_tri_b()
