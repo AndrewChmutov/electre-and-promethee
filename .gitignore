@@ -2,3 +2,4 @@ __pycache__/
 img/
 *.csv
 !/data/*.csv
+!/test-*/*.csv
