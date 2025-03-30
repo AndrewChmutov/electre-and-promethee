@@ -1,0 +1,330 @@
+\documentclass{article}
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+\usepackage{amsfonts}
+\usepackage{csvsimple}
+\usepackage{graphicx}
+\usepackage{caption}
+\graphicspath{ {../img/} }
+
+\title{PROMETHEE and ELECTRE-TRI-B}
+\begin{document}
+\maketitle
+
+\section{Dataset}
+\subsection{Domain}
+
+With the advent of \textit{"vibe"} coding, identifying the quality of the program is increasingly important. Currently, LLMs are capable of producing thousands lines of code in a matter of seconds, and by the virtue of that fact, \textit{"re-rolling"} solutions becomes a viable strategy - there is no longer a problem when rewriting a big chunk of code takes a considerable amount of time.
+
+ \par 
+
+Therefore, novel code assessment tools would turbo-charge quality, maintainability, and therefore development speed of software.
+
+\subsection{Source}
+The initial task of is to classify whether a given program contains software defect. The dataset was created by NASA:
+
+\begin{itemize}
+    \item source code - regular development,
+    \item labels - empirical data,
+    \item other features - \textit{"McCabe"} and \textit{"Halstead"} static analysis tools.
+\end{itemize}
+
+\subsection{DM point of view}
+Given a set of different implementations of a specific feature/module, decision maker sorts the alternatives into 3 ordinal categories.
+
+\subsection{Criteria}
+\subsubsection{Amount}
+Due to the fact that extracted features are strongly correlated between each other, the considered set of them is reduced from 21 to 4:
+
+\begin{enumerate}
+    \item \textit{v(g)} - \textit{"McCabe"} \textbf{cyclomatic complexity} - number of linearly independent paths in the program's source code,
+    \item \textit{iv(g)} - \textit{"McCabe"} \textbf{design complexity} - similar to cyclomatic complexity, but quantifies inter-module calls,
+    \item \textit{uniq\_Op} - \textbf{number of unique operators} - essentially crucial when running fault critical software on computationally limited hardware,
+    \item \textit{i} - \textit{"Halstead"} intelligence - derived from a formula that aggregates from basic features.
+\end{enumerate}
+
+\subsubsection{Types \& Importance}
+As it was mentioned, criteria matter differently.
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c| }
+    & \textbf{Weight} & \textbf{Type} & \textbf{Domain} \\
+    \textit{v(g)} & 3 & cost & $0, 0.5, 1, \dots$ \\
+    \textit{iv(g)} & 2 & cost & $0, 0.5, 1, \dots$ \\
+    \textit{uniq\_Op} & 1 & cost & $0, 0.5, 1, \dots$ \\
+    \textit{i} & 4 & gain & $\mathbb{R} \cap [0, +\infty)$ \\
+\end{tabular}
+\end{center}
+
+\noindent Other criteria that are present in the source dataset and not present in the report, are omitted.
+
+\subsection{Alternatives}
+\subsubsection{General}
+Since the initial dataset had different purpose (classification) it contains a plethora of alternatives. Therefore, to align the data with MCDA task, the amount was reduced down to 12 alternatives, effectively simulating the choice among different implementations.
+
+\subsection{Example}
+
+Let's consider the 208 example:
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c|c| }
+    \textbf{id} & \textbf{v(g)} & \textbf{iv(g)} & \textbf{uniq\_Op} & \textbf{i} \\
+    208 & 5.0 & 5.0 & 9.0 & 39.53 \\
+\end{tabular}
+\end{center}
+
+Both cyclomatic and design complexities are below average. Furthermore, number of unique operators is the least in the dataset. And what makes this example really stand out is that it has decent \textit{"intelligence"} for its operators.
+
+This alternative could theoretically be the best, if only other solutions did not feature much higher \textit{i}.
+
+
+
+\subsection{Domination}
+\noindent There are no dominating alternatives.
+
+\
+
+\noindent Non-dominated:
+
+\begin{itemize}
+    \item 208: $\textit{uniq\_Op} = 9.0$
+    \item 542: $\textit{i} = 81.84$
+    \item 1390, 194, 569, 1765: $\textit{v(g)} = 4.0, \textit{iv(g)} = 4.0$
+\end{itemize}
+
+
+\noindent There are no weakly-dominated alternatives.
+
+\
+
+\noindent Dominated: 1188, 381, 1582, 97, 142, 238.
+
+
+
+\subsection{Theoretical best alternative}
+Given that a bad decision might lead to daunting consequences, the alternative should excel in each criteria with a considerable margin. Obviously, it is impossible to solve a given problem without compromises. Therefore, criteria weights shall help us with that.
+
+\subsection{Best alternative}
+
+From the perspective of the author of the report, alternative 542 seems to be promising.
+Overall, it does not fall far behind from non-dominated alternatives with respect to \textit{"v(g)"}, \textit{"iv(g)"} - only by 1 unit worse, and with respect to \textit{"uniq\_Op"} - by 6 units, not critical. But that should definitely pay off at \textit{"i"} - 81.84 is surely a superior value, beating the second to best by nearly 10 units, let alone other alternatives.
+
+\subsection{Worst alternative}
+
+Alternative 238 appears to have the worst performance in terms of \textit{"v(g)"}, \textit{"iv(g)"}, therefore, subjectively, it might seem as the worst. Still, value of \textit{"i"} is reasonably high.
+
+\subsection{Pairwise comparison}
+Provide at least 4 pairwise comparison between alternatives in your dataset.
+
+\subsubsection{542 vs. 1390}
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c|c| }
+    & v(g) & iv(g) & uniq\_Op & i \\
+    542 & 5.0 & 5.0 & 15.0 & 81.84 \\
+    1390 & 4.0 & 4.0 & 15.0 & 23.96 \\
+\end{tabular}
+\end{center}
+
+542 is clearly dominates, there is no criteria with respect to which it loses to 1390.
+
+\subsubsection{569 vs. 238}
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c|c| }
+    & v(g) & iv(g) & uniq\_Op & i \\
+    569 & 4.0 & 4.0 & 11.0 & 30.85 \\
+    238 & 27.0 & 18.0 & 30.0 & 60.00
+\end{tabular}
+\end{center}
+
+While 569 does have less \textit{"intelligence"}, it outranks 238 in any other criteria significantly, so that would probably be the winner in this comparison.
+
+\subsubsection{194 vs 208}
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c|c| }
+    & v(g) & iv(g) & uniq\_Op & i \\
+    194 & 4.0 & 4.0 & 15.0 & 31.30 \\
+    208 & 5.0 & 5.0 & 9.0 & 39.53
+\end{tabular}
+\end{center}
+
+This is tricky to decide, because they go toe-to-toe. Still, subjectively, the advantage of 208 alternative is more tangible (\textit{"uniq\_Op"} and \textit{"i"}) than advantage of 194 (winning both complexities only by 1 unit).
+
+\subsubsection{569 vs. 1765}
+\begin{center}
+\begin{tabular}{ |c|c|c|c|c| }
+    & v(g) & iv(g) & uniq\_Op & i \\
+    569 & 4.0 & 4.0 & 11.0 & 30.85 \\
+    1765 & 4.0 & 4.0 & 12.0 & 42.54
+\end{tabular}
+\end{center}
+
+Here, alternatives differ by \textit{{"uniq\_Op"}} and \textit{"i"}. 1765, outperforming 569 by \textit{"intelligence"}, seems to be better.
+
+
+\section{PROMETHEE}
+\subsection{Preferential information}
+
+\begin{center}
+    \begin{tabular}{|c|c|c|c|}%
+    \textbf{Weights} & \textbf{Preference} & \textbf{Indifference} & \textbf{Type}% specify table head
+    \csvreader[head to column names]{../data/preference.csv}{}% use head of csv as column names
+    {\\\k & \p & \q & \type}% specify your coloumns here
+    \end{tabular}
+\end{center}
+
+
+\subsection{Final result}
+Enter the final result obtained with the method 2.0
+
+\begin{figure}[!htb]
+   \begin{minipage}{0.48\textwidth}
+     \centering
+     \includegraphics[width=1.25\linewidth]{Promethee I.png}
+   \end{minipage}\hfill
+   \begin{minipage}{0.48\textwidth}
+     \centering
+     \includegraphics[width=1.25\linewidth]{Promethee II.png}
+   \end{minipage}
+\end{figure}
+
+\subsection{Complete vs. Partial}
+Concluding from the plots above, ranking are pretty similar. Obviously, Promethee I delivers \textit{"volume"}, although Promethee II gives definite comparison among all alternatives.
+
+
+\subsection{Compare best and worst}
+The prediction for the best alternative was accurate, whereas the worst alternative is quite unexpected. Fortunately, that makes a lot of sense, since \textit{"i"} of 238 brings observable confusion, which later results in incomparability for a plentitude of other alternatives.
+
+\subsection{Compare with apriori believes}
+
+While most of the preliminary predictions aligned with both partial and complete ranking, \textbf {569 vs. 238} is only consistent with complete ranking. When it comes to partial ranking, those alternatives are marked as incomparable.
+
+\subsection{Additional comments}
+Curiously, alternative 238, despite high \textit{"intelligence"}, seemed to be absolutely the worst, although it is still pretty high up the Promethee II ranking. Nevertheless, the initial assumption is visible in Promethee II.
+
+
+\section{ELECTRE-TRI-B}
+\subsection{Preferential information}
+
+\begin{center}
+    \begin{tabular}{|c|c|c|c|}%
+    \textbf{Cyclomatic complexity} &
+    \textbf{Design complexity} &
+    \textbf{Unique operators} &
+    \textbf{Intelligence}% specify table head
+    \csvreader[
+        head to column names,
+    ]{../data/boundary_profiles.csv}%
+    {v(g)=\v, iv(g)=\iv, uniq_Op=\u}%
+    {\\ \v & \iv & \u & \i}
+    \end{tabular}
+    \captionof{table}{Boundary profiles}
+\end{center}
+
+
+\begin{center}
+    \begin{tabular}{|c|c|c|c|}%
+    \textbf{Cyclomatic complexity} &
+    \textbf{Design complexity} &
+    \textbf{Unique operators} &
+    \textbf{Intelligence}% specify table head
+    \csvreader[
+        head to column names,
+    ]{../data/preference_threshold.csv}%
+    {v(g)=\v, iv(g)=\iv, uniq_Op=\u}%
+    {\\ \v & \iv & \u & \i}
+    \end{tabular}
+    \captionof{table}{Preference thresholds}
+\end{center}
+
+
+\begin{center}
+    \begin{tabular}{|c|c|c|c|}%
+    \textbf{Cyclomatic complexity} &
+    \textbf{Design complexity} &
+    \textbf{Unique operators} &
+    \textbf{Intelligence}
+    \csvreader[
+        head to column names,
+    ]{../data/indifference_threshold.csv}
+    {v(g)=\v, iv(g)=\iv, uniq_Op=\u}
+    {\\ \v & \iv & \u & \i}
+    \end{tabular}
+    \captionof{table}{Indifference thresholds}
+\end{center}
+
+\begin{center}
+    \begin{tabular}{|c|c|c|c|}%
+    \textbf{Cyclomatic complexity} &
+    \textbf{Design complexity} &
+    \textbf{Unique operators} &
+    \textbf{Intelligence}
+    \csvreader[
+        head to column names,
+    ]{../data/veto_threshold.csv}
+    {v(g)=\v, iv(g)=\iv, uniq_Op=\u}
+    {\\ \v & \iv & \u & \i}
+    \end{tabular}
+    \captionof{table}{Veto thresholds}
+\end{center}
+
+\
+
+\begin{center}
+\begin{tabular}{ |c|c|c|}
+    & \textbf{Weights} & \textbf{Type} \\
+    Cyclomatic complexity & 0.3 & cost \\
+    Design complexity & 0.2 & cost \\
+    Unique operators & 0.1 & cost \\
+    Intelligence & 0.4 & gain
+\end{tabular}
+\captionof{table}{Weighs and Type}
+\end{center}
+
+
+\subsection{Final result}
+
+\begin{verbatim}
+Pessimistic
+2 [1765, 569]
+1 [1390, 381, 1582, 194, 208, 542]
+0 [97, 238, 142, 1188]
+
+Optimistic
+2 [1765, 569]
+1 [1390, 381, 1582, 194, 208, 1188, 542]
+0 [97, 238, 142]
+\end{verbatim}
+
+\subsection{Pessimistic vs. Optimistic}
+In this case, different kind of assessments do not differ much. However, 1188 alternative moved from class 0 to class 1 after switching to optimistic judgement.
+
+\subsection{Compare best and worst}
+
+Unlike with Promethee, alternative 238 is indeed in the worst class, however, 542 happens not to be assigned into the top (which is probably due to the fact that b2 boundary is pretty strict on cyclomatic and design complexity).
+
+\subsection{Compare with apriori believes}
+
+The ranking and apriori believes do not contradict each other. Interestingly, even if 542 strongly dominated over 1390, they are still in the same category.
+
+\subsection{Additional comments}
+
+Surprisingly, 542, having a stark advantage over other alternatives, couldn't make it into the top.
+
+\section{Comparison}
+\subsection{Compliance between methods}
+Promethee and Electre, in the case study, agree on lower levels, i.e. for alternatives 97, 238, 142, and also effectively for those which belong to mid-level class.
+
+\subsection{Differences between methods}
+
+
+Obviously, both methods solve different types of problems. Still, when it comes to the divergence of results, they noticeably disagree on 542. That is quite substantial. It is also worth mentioning that 569, being outranked by 381 and 208 according to Promethee ranking, skyrocketed to the top.
+
+\subsection{Other comments on the results}
+
+Overall, the provided solution seems to work fine, especially since they yield different results, and thus different perspectives, which was not expected prior to the experiment.
+
+To summarize, the application of these MCDA algorithms can indeed help solve a problem of software implementation ranking and sorting, especially if it is seamlessly integrated into development pipeline.
+
+\end{document}
